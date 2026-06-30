@@ -20,7 +20,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@handinhand.com" },
-    update: {},
+    update: { password, name: "管理员", role: "ADMIN" },
     create: {
       email: "admin@handinhand.com",
       password,
@@ -33,7 +33,7 @@ async function main() {
 
   const teacher1User = await prisma.user.upsert({
     where: { email: "zhangsan@example.com" },
-    update: {},
+    update: { password: teacherPassword, name: "张小明", role: "TEACHER" },
     create: {
       email: "zhangsan@example.com",
       password: teacherPassword,
@@ -55,7 +55,7 @@ async function main() {
 
   const teacher2User = await prisma.user.upsert({
     where: { email: "lisi@example.com" },
-    update: {},
+    update: { password: teacherPassword, name: "李小红", role: "TEACHER" },
     create: {
       email: "lisi@example.com",
       password: teacherPassword,
@@ -79,7 +79,7 @@ async function main() {
 
   const parentUser = await prisma.user.upsert({
     where: { email: "parent@example.com" },
-    update: {},
+    update: { password: parentPassword, name: "王家长", role: "PARENT" },
     create: {
       email: "parent@example.com",
       password: parentPassword,
@@ -100,8 +100,11 @@ async function main() {
     },
   });
 
-  const student2 = await prisma.student.create({
-    data: {
+  const student2 = await prisma.student.upsert({
+    where: { id: "seed-student-zhao" },
+    update: {},
+    create: {
+      id: "seed-student-zhao",
       name: "赵小美",
       parentName: "赵家长",
       parentPhone: "13900139000",
@@ -117,23 +120,27 @@ async function main() {
   });
 
   if (teacher1 && teacher2) {
+    await prisma.session.deleteMany({});
     await prisma.session.createMany({
       data: [
         {
           teacherId: teacher1.id,
           studentId: student1.id,
           subject: "数学",
-          date: new Date("2026-06-01"),
-          duration: 2,
+          date: new Date("2026-06-01T14:00:00"),
+          durationMinutes: 60,
           notes: "分数加减法",
+          feedback: "学生掌握良好，能独立完成练习题。建议加强应用题训练。",
+          actualStartAt: new Date("2026-06-01T14:05:00"),
+          actualEndAt: new Date("2026-06-01T15:00:00"),
           recordedBy: admin.name,
         },
         {
           teacherId: teacher1.id,
           studentId: student1.id,
           subject: "数学",
-          date: new Date("2026-06-08"),
-          duration: 1,
+          date: new Date("2026-06-08T14:00:00"),
+          durationMinutes: 60,
           notes: "乘法口诀",
           recordedBy: admin.name,
         },
@@ -141,9 +148,12 @@ async function main() {
           teacherId: teacher2.id,
           studentId: student2.id,
           subject: "英语",
-          date: new Date("2026-06-05"),
-          duration: 2,
+          date: new Date("2026-06-05T10:00:00"),
+          durationMinutes: 90,
           notes: "基础单词",
+          feedback: "单词记忆不错，发音需要多练习。",
+          actualStartAt: new Date("2026-06-05T10:02:00"),
+          actualEndAt: new Date("2026-06-05T11:30:00"),
           recordedBy: admin.name,
         },
       ],

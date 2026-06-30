@@ -45,3 +45,9 @@ next-env.d.ts
 # database
 *.db
 *.db-journal
+
+# user uploads
+public/uploads/**/*
+!public/uploads/.gitkeep
+!public/uploads/resumes/.gitkeep
+!public/uploads/photos/.gitkeep

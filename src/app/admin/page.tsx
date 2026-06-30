@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminPageTitle } from "@/components/admin-shell";
 import { IOSCard, IOSBadge } from "@/components/ui/ios";
 import { GraduationCap, Users, BookOpen, CheckCircle } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDurationMinutes, formatScheduledRange } from "@/lib/utils";
 
 export default async function AdminDashboard() {
   const [teacherCount, studentCount, sessionCount, recentSessions] =
@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
     ]);
 
   const totalDuration = await prisma.session.aggregate({
-    _sum: { duration: true },
+    _sum: { durationMinutes: true },
   });
 
   const stats = [
@@ -44,8 +44,8 @@ export default async function AdminDashboard() {
       color: "text-ios-orange",
     },
     {
-      label: "总课时",
-      value: totalDuration._sum.duration ?? 0,
+      label: "总时长",
+      value: formatDurationMinutes(totalDuration._sum.durationMinutes ?? 0),
       icon: CheckCircle,
       color: "text-ios-blue",
     },
@@ -62,7 +62,7 @@ export default async function AdminDashboard() {
               <s.icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-2xl font-bold leading-tight">{s.value}</p>
               <p className="text-xs text-ios-gray">{s.label}</p>
             </div>
           </IOSCard>
@@ -85,9 +85,9 @@ export default async function AdminDashboard() {
                 <p className="font-medium">
                   {s.teacher.user.name} → {s.student.name}
                 </p>
-                <p className="text-sm text-ios-gray">
-                  {formatDate(s.date)} · {s.duration} 节
-                </p>
+              <p className="text-sm text-ios-gray">
+                {formatScheduledRange(s.date, s.durationMinutes)}
+              </p>
               </div>
               <IOSBadge color="blue">{s.subject}</IOSBadge>
             </div>

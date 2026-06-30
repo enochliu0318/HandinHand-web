@@ -10,7 +10,8 @@ import {
   IOSBadge,
   IOSEmptyState,
 } from "@/components/ui/ios";
-import { Plus, User, Upload, Trash2, X } from "lucide-react";
+import { FileUploadButton } from "@/components/file-upload-button";
+import { Plus, User, Trash2, X } from "lucide-react";
 
 interface Teacher {
   id: string;
@@ -27,6 +28,7 @@ export default function AdminTeachersPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/teachers");
@@ -83,12 +85,19 @@ export default function AdminTeachersPage() {
     file: File,
     type: "resume" | "photo"
   ) {
+    setUploadingId(`${teacherId}-${type}`);
     const fd = new FormData();
     fd.append("file", file);
     fd.append("type", type);
     fd.append("teacherId", teacherId);
-    await fetch("/api/upload", { method: "POST", body: fd });
-    load();
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    setUploadingId(null);
+    if (res.ok) {
+      load();
+    } else {
+      const err = await res.json();
+      alert(err.error || "上传失败");
+    }
   }
 
   return (
@@ -190,36 +199,24 @@ export default function AdminTeachersPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-ios-gray5">
-                <label className="cursor-pointer">
-                  <IOSButton size="sm" variant="secondary" type="button">
-                    <Upload className="w-3.5 h-3.5 mr-1" />
-                    上传简历
-                  </IOSButton>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.jpg,.png"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(t.id, f, "resume");
-                    }}
-                  />
-                </label>
-                <label className="cursor-pointer">
-                  <IOSButton size="sm" variant="secondary" type="button">
-                    <Upload className="w-3.5 h-3.5 mr-1" />
-                    上传头像
-                  </IOSButton>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(t.id, f, "photo");
-                    }}
-                  />
-                </label>
+                <FileUploadButton
+                  size="sm"
+                  label={
+                    uploadingId === `${t.id}-resume` ? "上传中..." : "上传简历"
+                  }
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                  disabled={uploadingId !== null}
+                  onSelect={(file) => handleUpload(t.id, file, "resume")}
+                />
+                <FileUploadButton
+                  size="sm"
+                  label={
+                    uploadingId === `${t.id}-photo` ? "上传中..." : "上传头像"
+                  }
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={uploadingId !== null}
+                  onSelect={(file) => handleUpload(t.id, file, "photo")}
+                />
                 <IOSButton
                   size="sm"
                   variant="secondary"

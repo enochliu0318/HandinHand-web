@@ -10,11 +10,13 @@ import {
   GraduationCap,
   Users,
   BookOpen,
+  UserPlus,
   LogOut,
 } from "lucide-react";
 
 const tabs = [
   { href: "/admin", label: "概览", icon: <LayoutDashboard className="w-full h-full" /> },
+  { href: "/admin/applications", label: "申请", icon: <UserPlus className="w-full h-full" /> },
   { href: "/admin/teachers", label: "老师", icon: <GraduationCap className="w-full h-full" /> },
   { href: "/admin/students", label: "学生", icon: <Users className="w-full h-full" /> },
   { href: "/admin/sessions", label: "课程", icon: <BookOpen className="w-full h-full" /> },

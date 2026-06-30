@@ -5,7 +5,17 @@ import bcrypt from "bcryptjs";
 
 export async function GET() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  if (!session) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
+  if (session.user.role === "TEACHER") {
+    const students = await prisma.student.findMany({
+      select: { id: true, name: true, grade: true },
+      orderBy: { name: "asc" },
+    });
+    return NextResponse.json(students);
+  }
+
+  if (session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "未授权" }, { status: 403 });
   }
 

@@ -13,6 +13,17 @@ enum Role {
   PARENT
 }
 
+enum ApplicationRole {
+  TEACHER
+  PARENT
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -26,43 +37,80 @@ model User {
 }
 
 model Teacher {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bio         String    @default("")
-  subjects    String    @default("")
-  resumeUrl   String?
-  photoUrl    String?
-  isPublished Boolean   @default(false)
-  sessions    Session[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                String              @default("")
+  subjects           String              @default("")
+  resumeUrl          String?
+  photoUrl           String?
+  isPublished        Boolean             @default(false)
+  sessions           Session[]
+  recurringSchedules RecurringSchedule[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 }
 
 model Student {
-  id          String    @id @default(cuid())
-  userId      String?   @unique
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  name        String
-  parentName  String
-  parentPhone String?
-  grade       String?
-  sessions    Session[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String              @id @default(cuid())
+  userId             String?             @unique
+  user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name               String
+  parentName         String
+  parentPhone        String?
+  grade              String?
+  sessions           Session[]
+  recurringSchedules RecurringSchedule[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model RecurringSchedule {
+  id              String    @id @default(cuid())
+  teacherId       String
+  teacher         Teacher   @relation(fields: [teacherId], references: [id])
+  studentId       String
+  student         Student   @relation(fields: [studentId], references: [id])
+  subject         String
+  dayOfWeek       Int
+  startTime       String
+  durationMinutes Int       @default(60)
+  startDate       DateTime
+  endDate         DateTime?
+  notes           String?
+  isActive        Boolean   @default(true)
+  sessions        Session[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Session {
-  id         String   @id @default(cuid())
-  teacherId  String
-  teacher    Teacher  @relation(fields: [teacherId], references: [id])
-  studentId  String
-  student    Student  @relation(fields: [studentId], references: [id])
-  subject    String
-  date       DateTime
-  duration   Int      @default(1)
-  notes      String?
-  recordedBy String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String             @id @default(cuid())
+  teacherId           String
+  teacher             Teacher            @relation(fields: [teacherId], references: [id])
+  studentId           String
+  student             Student            @relation(fields: [studentId], references: [id])
+  subject             String
+  date                DateTime
+  durationMinutes     Int                @default(60)
+  notes               String?
+  feedback            String?
+  actualStartAt       DateTime?
+  actualEndAt         DateTime?
+  recurringScheduleId String?
+  recurringSchedule   RecurringSchedule? @relation(fields: [recurringScheduleId], references: [id], onDelete: SetNull)
+  recordedBy          String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model AccountApplication {
+  id        String            @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  role      ApplicationRole
+  message   String?
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
 }

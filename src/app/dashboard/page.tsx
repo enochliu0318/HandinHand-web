@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { IOSCard, IOSBadge } from "@/components/ui/ios";
 import { BookOpen, Users, Clock } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDurationMinutes, formatScheduledRange } from "@/lib/utils";
 
 export default async function TeacherDashboard() {
   const session = await auth();
@@ -23,7 +23,10 @@ export default async function TeacherDashboard() {
     return <p className="text-center text-ios-gray py-8">未找到老师信息</p>;
   }
 
-  const totalDuration = teacher.sessions.reduce((s, r) => s + r.duration, 0);
+  const totalMinutes = teacher.sessions.reduce(
+    (s, r) => s + r.durationMinutes,
+    0
+  );
   const uniqueStudents = new Set(teacher.sessions.map((s) => s.studentId)).size;
   const subjects = [
     ...new Set(teacher.sessions.map((s) => s.subject)),
@@ -36,13 +39,13 @@ export default async function TeacherDashboard() {
 
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { icon: BookOpen, label: "总课时", value: totalDuration },
+          { icon: BookOpen, label: "总时长", value: formatDurationMinutes(totalMinutes) },
           { icon: Users, label: "学生数", value: uniqueStudents },
           { icon: Clock, label: "授课次数", value: teacher.sessions.length },
         ].map((s) => (
           <IOSCard key={s.label} className="text-center py-4">
             <s.icon className="w-5 h-5 text-ios-blue mx-auto mb-1" />
-            <p className="text-xl font-bold">{s.value}</p>
+            <p className="text-lg font-bold leading-tight">{s.value}</p>
             <p className="text-xs text-ios-gray">{s.label}</p>
           </IOSCard>
         ))}
@@ -78,7 +81,7 @@ export default async function TeacherDashboard() {
               <div>
                 <p className="font-medium">{s.student.name}</p>
                 <p className="text-sm text-ios-gray">
-                  {formatDate(s.date)} · {s.duration} 节
+                  {formatScheduledRange(s.date, s.durationMinutes)}
                 </p>
               </div>
               <IOSBadge color="blue">{s.subject}</IOSBadge>

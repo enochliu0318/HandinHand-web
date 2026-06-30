@@ -10,13 +10,35 @@ function getDatabaseUrl() {
   return url;
 }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
 function createPrismaClient() {
   const adapter = new PrismaBetterSqlite3({ url: getDatabaseUrl() });
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+  prismaVersion: string | undefined;
+};
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Bust cached client after schema changes during dev hot reload.
+const PRISMA_CLIENT_VERSION = "session-durationMinutes";
+
+function getPrismaClient() {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    globalForPrisma.prisma &&
+    globalForPrisma.prismaVersion !== PRISMA_CLIENT_VERSION
+  ) {
+    void globalForPrisma.prisma.$disconnect();
+    globalForPrisma.prisma = undefined;
+  }
+
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+    globalForPrisma.prismaVersion = PRISMA_CLIENT_VERSION;
+  }
+
+  return globalForPrisma.prisma;
+}
+
+export const prisma = getPrismaClient();

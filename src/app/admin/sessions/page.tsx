@@ -8,12 +8,14 @@ import {
   IOSInput,
   IOSSelect,
   IOSTextarea,
-  IOSBadge,
   IOSSegmentedControl,
   IOSEmptyState,
 } from "@/components/ui/ios";
-import { Plus, BookOpen, X, Trash2 } from "lucide-react";
-import { formatDate, SUBJECTS } from "@/lib/utils";
+import { Plus, BookOpen, X } from "lucide-react";
+import { formatDurationMinutes, DAYS_OF_WEEK, SUBJECTS } from "@/lib/utils";
+import { ExportScheduleButton } from "@/components/export-schedule-button";
+import { SessionDetailCard } from "@/components/session-detail";
+import type { SessionRecord } from "@/types/session";
 
 interface Teacher {
   id: string;
@@ -25,25 +27,15 @@ interface Student {
   name: string;
 }
 
-interface Session {
-  id: string;
-  subject: string;
-  date: string;
-  duration: number;
-  notes: string | null;
-  recordedBy: string | null;
-  teacher: { user: { name: string } };
-  student: { name: string };
-}
-
 export default function AdminSessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [filterId, setFilterId] = useState("");
+  const [scheduleType, setScheduleType] = useState("once");
 
   async function load() {
     const [sessRes, teachRes, studRes] = await Promise.all([
@@ -53,9 +45,12 @@ export default function AdminSessionsPage() {
       fetch("/api/teachers"),
       fetch("/api/students"),
     ]);
-    setSessions(await sessRes.json());
-    setTeachers(await teachRes.json());
-    setStudents(await studRes.json());
+    const sessData = await sessRes.json();
+    const teachData = await teachRes.json();
+    const studData = await studRes.json();
+    setSessions(Array.isArray(sessData) ? sessData : []);
+    setTeachers(Array.isArray(teachData) ? teachData : []);
+    setStudents(Array.isArray(studData) ? studData : []);
     setLoading(false);
   }
 
@@ -65,7 +60,7 @@ export default function AdminSessionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, filterId]);
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleCreateOnce(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const res = await fetch("/api/sessions", {
@@ -76,7 +71,35 @@ export default function AdminSessionsPage() {
         studentId: fd.get("studentId"),
         subject: fd.get("subject"),
         date: fd.get("date"),
-        duration: parseInt(fd.get("duration") as string) || 1,
+        startTime: fd.get("startTime"),
+        durationMinutes: parseInt(fd.get("durationMinutes") as string) || 60,
+        notes: fd.get("notes"),
+      }),
+    });
+    if (res.ok) {
+      setShowForm(false);
+      load();
+    } else {
+      const err = await res.json();
+      alert(err.error);
+    }
+  }
+
+  async function handleCreateRecurring(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const res = await fetch("/api/recurring-schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teacherId: fd.get("teacherId"),
+        studentId: fd.get("studentId"),
+        subject: fd.get("subject"),
+        dayOfWeek: fd.get("dayOfWeek"),
+        startTime: fd.get("startTime"),
+        startDate: fd.get("startDate"),
+        weeksAhead: parseInt(fd.get("weeksAhead") as string) || 8,
+        durationMinutes: parseInt(fd.get("durationMinutes") as string) || 60,
         notes: fd.get("notes"),
       }),
     });
@@ -95,18 +118,39 @@ export default function AdminSessionsPage() {
     load();
   }
 
-  const totalDuration = sessions.reduce((sum, s) => sum + s.duration, 0);
+  const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  const teacherOptions = [
+    { value: "", label: "请选择老师" },
+    ...teachers.map((t) => ({ value: t.id, label: t.user.name })),
+  ];
+
+  const studentOptions = [
+    { value: "", label: "请选择学生" },
+    ...students.map((s) => ({ value: s.id, label: s.name })),
+  ];
+
+  const subjectOptions = [
+    { value: "", label: "请选择科目" },
+    ...SUBJECTS.map((s) => ({ value: s, label: s })),
+  ];
 
   return (
     <>
       <AdminPageTitle
         title="授课记录"
-        subtitle={`共 ${sessions.length} 条 · ${totalDuration} 课时`}
+        subtitle={`共 ${sessions.length} 条 · ${formatDurationMinutes(totalMinutes)}`}
         action={
-          <IOSButton size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            录入
-          </IOSButton>
+          <div className="flex gap-2">
+            <ExportScheduleButton
+              sessions={sessions}
+              filename="授课记录.csv"
+            />
+            <IOSButton size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              录入
+            </IOSButton>
+          </div>
         }
       />
 
@@ -130,13 +174,7 @@ export default function AdminSessionsPage() {
           label="选择老师"
           value={filterId}
           onChange={(e) => setFilterId(e.target.value)}
-          options={[
-            { value: "", label: "全部老师" },
-            ...teachers.map((t) => ({
-              value: t.id,
-              label: t.user.name,
-            })),
-          ]}
+          options={[{ value: "", label: "全部老师" }, ...teacherOptions.slice(1)]}
         />
       )}
       {filter === "student" && (
@@ -145,10 +183,7 @@ export default function AdminSessionsPage() {
           label="选择学生"
           value={filterId}
           onChange={(e) => setFilterId(e.target.value)}
-          options={[
-            { value: "", label: "全部学生" },
-            ...students.map((s) => ({ value: s.id, label: s.name })),
-          ]}
+          options={[{ value: "", label: "全部学生" }, ...studentOptions.slice(1)]}
         />
       )}
 
@@ -160,56 +195,102 @@ export default function AdminSessionsPage() {
               <X className="w-5 h-5 text-ios-gray" />
             </button>
           </div>
-          <form onSubmit={handleCreate} className="space-y-3">
-            <IOSSelect
-              name="teacherId"
-              label="老师"
-              required
-              options={[
-                { value: "", label: "请选择老师" },
-                ...teachers.map((t) => ({
-                  value: t.id,
-                  label: t.user.name,
-                })),
-              ]}
-            />
-            <IOSSelect
-              name="studentId"
-              label="学生"
-              required
-              options={[
-                { value: "", label: "请选择学生" },
-                ...students.map((s) => ({ value: s.id, label: s.name })),
-              ]}
-            />
-            <IOSSelect
-              name="subject"
-              label="科目"
-              required
-              options={[
-                { value: "", label: "请选择科目" },
-                ...SUBJECTS.map((s) => ({ value: s, label: s })),
-              ]}
-            />
-            <IOSInput
-              name="date"
-              label="上课日期"
-              type="date"
-              required
-              defaultValue={new Date().toISOString().split("T")[0]}
-            />
-            <IOSInput
-              name="duration"
-              label="课时数"
-              type="number"
-              min="1"
-              defaultValue="1"
-            />
-            <IOSTextarea name="notes" label="备注" rows={2} placeholder="本节内容..." />
-            <IOSButton type="submit" fullWidth>
-              保存记录
-            </IOSButton>
-          </form>
+
+          <IOSSegmentedControl
+            className="mb-4"
+            options={[
+              { value: "once", label: "单次" },
+              { value: "weekly", label: "每周" },
+            ]}
+            value={scheduleType}
+            onChange={setScheduleType}
+          />
+
+          {scheduleType === "once" ? (
+            <form onSubmit={handleCreateOnce} className="space-y-3">
+              <IOSSelect name="teacherId" label="老师" required options={teacherOptions} />
+              <IOSSelect name="studentId" label="学生" required options={studentOptions} />
+              <IOSSelect name="subject" label="科目" required options={subjectOptions} />
+              <IOSInput
+                name="date"
+                label="上课日期"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().split("T")[0]}
+              />
+              <IOSInput
+                name="startTime"
+                label="开始时间"
+                type="time"
+                required
+                defaultValue="14:00"
+              />
+              <IOSInput
+                name="durationMinutes"
+                label="时长（分钟）"
+                type="number"
+                min="15"
+                step="15"
+                defaultValue="60"
+              />
+              <IOSTextarea name="notes" label="备注" rows={2} placeholder="本节内容..." />
+              <IOSButton type="submit" fullWidth>
+                保存记录
+              </IOSButton>
+            </form>
+          ) : (
+            <form onSubmit={handleCreateRecurring} className="space-y-3">
+              <IOSSelect name="teacherId" label="老师" required options={teacherOptions} />
+              <IOSSelect name="studentId" label="学生" required options={studentOptions} />
+              <IOSSelect name="subject" label="科目" required options={subjectOptions} />
+              <IOSSelect
+                name="dayOfWeek"
+                label="每周"
+                required
+                options={[
+                  { value: "", label: "请选择" },
+                  ...DAYS_OF_WEEK.map((d) => ({
+                    value: String(d.value),
+                    label: d.label,
+                  })),
+                ]}
+              />
+              <IOSInput
+                name="startTime"
+                label="开始时间"
+                type="time"
+                required
+                defaultValue="14:00"
+              />
+              <IOSInput
+                name="startDate"
+                label="开始日期"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().split("T")[0]}
+              />
+              <IOSInput
+                name="weeksAhead"
+                label="生成周数"
+                type="number"
+                min="1"
+                max="52"
+                defaultValue="8"
+              />
+              <IOSInput
+                name="durationMinutes"
+                label="每次时长（分钟）"
+                type="number"
+                min="15"
+                step="15"
+                defaultValue="60"
+              />
+              <IOSTextarea name="notes" label="备注" rows={2} placeholder="固定课程内容..." />
+              <IOSButton type="submit" fullWidth>
+                生成课程
+              </IOSButton>
+            </form>
+          )}
         </IOSCard>
       )}
 
@@ -224,39 +305,13 @@ export default function AdminSessionsPage() {
       ) : (
         <div className="space-y-3">
           {sessions.map((s) => (
-            <IOSCard key={s.id}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <IOSBadge color="blue">{s.subject}</IOSBadge>
-                    <span className="text-sm text-ios-gray">
-                      {s.duration} 节
-                    </span>
-                  </div>
-                  <p className="font-medium">
-                    {s.teacher.user.name} → {s.student.name}
-                  </p>
-                  <p className="text-sm text-ios-gray">
-                    {formatDate(s.date)}
-                  </p>
-                  {s.notes && (
-                    <p className="text-sm text-ios-gray mt-1">{s.notes}</p>
-                  )}
-                  {s.recordedBy && (
-                    <p className="text-xs text-ios-gray mt-1">
-                      录入：{s.recordedBy}
-                    </p>
-                  )}
-                </div>
-                <IOSButton
-                  size="sm"
-                  variant="danger"
-                  onClick={() => handleDelete(s.id)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </IOSButton>
-              </div>
-            </IOSCard>
+            <SessionDetailCard
+              key={s.id}
+              session={s}
+              mode="admin"
+              onUpdate={load}
+              onDelete={() => handleDelete(s.id)}
+            />
           ))}
         </div>
       )}

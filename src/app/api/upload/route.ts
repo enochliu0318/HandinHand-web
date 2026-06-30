@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { saveUpload } from "@/lib/upload";
+import { saveUpload, validateUpload } from "@/lib/upload";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
@@ -26,13 +26,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "未授权" }, { status: 403 });
   }
 
-  const subdir = type === "resume" ? "resumes" : "photos";
-  const url = await saveUpload(file, subdir);
+  const validationError = validateUpload(file, type);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
 
-  const updated = await prisma.teacher.update({
-    where: { id: teacherId },
-    data: type === "resume" ? { resumeUrl: url } : { photoUrl: url },
-  });
+  try {
+    const subdir = type === "resume" ? "resumes" : "photos";
+    const url = await saveUpload(file, subdir);
 
-  return NextResponse.json({ url, teacher: updated });
+    const updated = await prisma.teacher.update({
+      where: { id: teacherId },
+      data: type === "resume" ? { resumeUrl: url } : { photoUrl: url },
+      include: { user: { select: { name: true, email: true } } },
+    });
+
+    return NextResponse.json({ url, teacher: updated });
+  } catch (error) {
+    console.error("Upload failed:", error);
+    return NextResponse.json({ error: "文件保存失败" }, { status: 500 });
+  }
 }

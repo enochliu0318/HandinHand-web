@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { combineDateAndTime } from "@/lib/recurring";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -43,24 +44,50 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
-    return NextResponse.json({ error: "未授权" }, { status: 403 });
-  }
+  if (!session) return NextResponse.json({ error: "未授权" }, { status: 401 });
 
   const body = await req.json();
-  const { teacherId, studentId, subject, date, duration, notes } = body;
+  const {
+    teacherId,
+    studentId,
+    subject,
+    date,
+    startTime,
+    durationMinutes,
+    notes,
+  } = body;
 
-  if (!teacherId || !studentId || !subject || !date) {
+  if (!studentId || !subject || !date) {
     return NextResponse.json({ error: "缺少必填字段" }, { status: 400 });
   }
 
+  let resolvedTeacherId = teacherId;
+
+  if (session.user.role === "TEACHER") {
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: session.user.id },
+    });
+    if (!teacher) {
+      return NextResponse.json({ error: "未找到老师信息" }, { status: 403 });
+    }
+    resolvedTeacherId = teacher.id;
+  } else if (session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "未授权" }, { status: 403 });
+  } else if (!resolvedTeacherId) {
+    return NextResponse.json({ error: "缺少必填字段" }, { status: 400 });
+  }
+
+  const scheduledAt = startTime
+    ? combineDateAndTime(date, startTime)
+    : new Date(date);
+
   const record = await prisma.session.create({
     data: {
-      teacherId,
+      teacherId: resolvedTeacherId,
       studentId,
       subject,
-      date: new Date(date),
-      duration: duration || 1,
+      date: scheduledAt,
+      durationMinutes: parseInt(durationMinutes, 10) || 60,
       notes: notes || null,
       recordedBy: session.user.name,
     },

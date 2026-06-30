@@ -18,6 +18,9 @@ export function PublicHeader({ session }: PublicHeaderProps) {
           <Link href="/teachers" className="text-sm text-ios-secondary">
             找老师
           </Link>
+          <Link href="/apply" className="text-sm text-ios-secondary">
+            申请账号
+          </Link>
           {session ? (
             <Link
               href={

@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HandinHand-web
 
-## Getting Started
+大手拉小手（Hand in Hand）— 大孩子教小孩子，老师简历浏览与课程管理系统。
 
-First, run the development server:
+## 功能
+
+- **公开页面**：家长浏览已发布老师的简历和简介
+- **管理后台**：管理人员管理老师、学生，录入授课记录
+- **老师面板**：查看个人授课统计和记录，编辑资料
+- **家长中心**：查看孩子的上课记录
+
+## 技术栈
+
+- Next.js 16 + TypeScript
+- Prisma + SQLite
+- NextAuth.js（多角色认证）
+- Tailwind CSS（iOS 风格 UI）
+
+## 快速开始
 
 ```bash
+cd HandinHand-web
+npm install
+npx prisma migrate dev --name init
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 测试账号
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 角色 | 邮箱 | 密码 |
+|------|------|------|
+| 管理员 | admin@handinhand.com | admin123 |
+| 老师 | zhangsan@example.com | teacher123 |
+| 家长 | parent@example.com | parent123 |
 
-## Learn More
+## 页面路由
 
-To learn more about Next.js, take a look at the following resources:
+| 路由 | 说明 | 权限 |
+|------|------|------|
+| `/` | 首页 | 公开 |
+| `/teachers` | 老师列表 | 公开 |
+| `/teachers/[id]` | 老师详情 | 公开 |
+| `/login` | 登录 | 公开 |
+| `/admin` | 管理后台 | 管理员 |
+| `/dashboard` | 老师面板 | 老师 |
+| `/parent` | 家长中心 | 家长 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 项目结构
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/           # 页面和 API 路由
+├── components/    # UI 组件（iOS 风格）
+├── lib/           # 工具库（auth, prisma, upload）
+└── generated/     # Prisma 生成的客户端
+```

@@ -1,65 +1,79 @@
-import Image from "next/image";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { PublicLayout } from "@/components/layouts";
+import { IOSCard, IOSButton } from "@/components/ui/ios";
+import { GraduationCap, Users, BookOpen, Heart } from "lucide-react";
 
-export default function Home() {
+export default async function HomePage() {
+  const session = await auth();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <PublicLayout session={session}>
+      {/* Hero */}
+      <section className="text-center py-8">
+        <div className="w-20 h-20 bg-ios-blue/10 rounded-3xl flex items-center justify-center mx-auto mb-5">
+          <Heart className="w-10 h-10 text-ios-blue" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-3">大手拉小手</h1>
+        <p className="text-ios-gray text-base leading-relaxed max-w-sm mx-auto">
+          大孩子教小孩子，传递知识与温暖。浏览优秀学长学姐的简历，为孩子找到最合适的辅导老师。
+        </p>
+      </section>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { icon: GraduationCap, label: "优秀老师", value: "10+" },
+          { icon: Users, label: "受益学生", value: "50+" },
+          { icon: BookOpen, label: "授课节数", value: "200+" },
+        ].map((item) => (
+          <IOSCard key={item.label} className="text-center py-4">
+            <item.icon className="w-6 h-6 text-ios-blue mx-auto mb-2" />
+            <p className="text-xl font-bold">{item.value}</p>
+            <p className="text-xs text-ios-gray mt-0.5">{item.label}</p>
+          </IOSCard>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <IOSCard className="mb-6">
+        <h2 className="text-lg font-semibold mb-2">寻找合适的老师</h2>
+        <p className="text-sm text-ios-gray mb-4">
+          浏览各位学长学姐的简历，了解他们的擅长科目和教学经验。
+        </p>
+        <Link href="/teachers">
+          <IOSButton fullWidth>浏览老师简历</IOSButton>
+        </Link>
+      </IOSCard>
+
+      {/* Features */}
+      <div className="space-y-3">
+        <p className="text-xs text-ios-gray uppercase tracking-wide px-1">
+          项目特色
+        </p>
+        {[
+          {
+            title: "学长学姐授课",
+            desc: "高中生志愿者一对一辅导小学生",
+          },
+          {
+            title: "科目丰富",
+            desc: "数学、英语、语文、编程等多科目覆盖",
+          },
+          {
+            title: "全程记录",
+            desc: "每节课均有记录，家长可随时查看",
+          },
+        ].map((item) => (
+          <IOSCard key={item.title} className="flex gap-3 items-start">
+            <div className="w-2 h-2 rounded-full bg-ios-blue mt-2 shrink-0" />
+            <div>
+              <p className="font-medium">{item.title}</p>
+              <p className="text-sm text-ios-gray">{item.desc}</p>
+            </div>
+          </IOSCard>
+        ))}
+      </div>
+    </PublicLayout>
   );
 }

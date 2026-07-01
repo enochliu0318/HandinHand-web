@@ -1,9 +1,11 @@
-FROM node:20-alpine AS deps
+ARG NODE_IMAGE=node:22-alpine
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# postinstall 会跑 prisma generate，此阶段尚无 prisma/ 目录
+RUN npm ci --ignore-scripts
 
-FROM node:20-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -14,7 +16,7 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 
 RUN npx prisma generate && npm run build
 
-FROM node:20-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

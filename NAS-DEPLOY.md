@@ -193,8 +193,53 @@ docker run --rm \
 
 ## 5. 故障排查
 
+### 构建失败：`docker.fnnas.com ... 401 Unauthorized`
+
+**原因**：飞牛 NAS 的 Docker 会把 `docker.io` 请求转发到官方镜像加速 `docker.fnnas.com`。当前返回 **401**，表示该加速源未授权（未登录、服务变更或临时不可用），**与项目 Dockerfile 无关**。
+
+错误特征：
+
+```
+failed to resolve source metadata for docker.io/library/node:20-alpine
+unexpected status from HEAD request to https://docker.fnnas.com/... 401 Unauthorized
+```
+
+**按顺序尝试：**
+
+**方法 1 — 飞牛 NAS 里修复镜像源（推荐）**
+
+1. 打开飞牛 **Docker / 容器** → **设置** → **镜像加速 / Registry**
+2. 若已登录飞牛账号，尝试重新登录或刷新 Docker Hub 加速权限
+3. 若 `docker.fnnas.com` 持续 401，**删除或停用**该加速，改用其他可用镜像（见方法 2）
+4. 修改后重启 Docker 服务，再执行：
+
+```bash
+docker pull node:20-alpine
+```
+
+能 pull 成功后再 `docker compose up -d --build`。
+
+**方法 2 — 使用其他镜像地址构建**
+
+在 `.env` 中指定可访问的 Node 镜像（DaoCloud 等），然后重新构建：
+
+```env
+NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine
+```
+
+```bash
+RUN_SEED=true docker compose up -d --build
+```
+
+**方法 3 — 在能访问 Docker Hub 的电脑构建后导入 NAS**
+
+在 PC 上构建并导出，拷到 NAS 后 `docker load`，再 `docker compose up`（仅启动 db + app，不 rebuild）。
+
+---
+
 | 现象 | 可能原因 |
 |------|----------|
+| `401 Unauthorized` + `docker.fnnas.com` | 飞牛镜像加速未授权，见上文 |
 | app 容器反复重启 | 数据库未就绪或 `POSTGRES_PASSWORD` 不一致 |
 | 无法登录 | `AUTH_SECRET` 未设置；seed 未执行 |
 | 上传失败 | uploads 卷权限；检查 `docker compose logs app` |

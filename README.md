@@ -12,9 +12,16 @@
 ## 技术栈
 
 - Next.js 16 + TypeScript
-- Prisma + PostgreSQL（生产：Neon；文件：Cloudflare R2）
+- Prisma + PostgreSQL（云：Neon；自托管：Docker / NAS）
 - NextAuth.js（多角色认证）
 - Tailwind CSS（iOS 风格 UI）
+
+## 部署方式
+
+| 方式 | 文档 |
+|------|------|
+| 云原生（Vercel + Neon + R2） | [DEPLOY.md](./DEPLOY.md) |
+| 自托管（飞牛 NAS / Docker） | [NAS-DEPLOY.md](./NAS-DEPLOY.md) |
 
 ## 快速开始
 
@@ -29,7 +36,7 @@ npm run db:seed
 npm run dev
 ```
 
-生产部署见 [DEPLOY.md](./DEPLOY.md)。安全说明见 [SECURITY.md](./SECURITY.md)。
+生产部署见 [DEPLOY.md](./DEPLOY.md)（云原生）或 [NAS-DEPLOY.md](./NAS-DEPLOY.md)（飞牛 NAS / Docker）。安全说明见 [SECURITY.md](./SECURITY.md)。
 
 打开 http://localhost:3000
 

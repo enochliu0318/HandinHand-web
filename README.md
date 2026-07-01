@@ -12,7 +12,7 @@
 ## 技术栈
 
 - Next.js 16 + TypeScript
-- Prisma + SQLite
+- Prisma + PostgreSQL（生产：Neon；文件：Cloudflare R2）
 - NextAuth.js（多角色认证）
 - Tailwind CSS（iOS 风格 UI）
 
@@ -20,11 +20,16 @@
 
 ```bash
 cd HandinHand-web
+cp .env.example .env
+# 编辑 .env，填入 DATABASE_URL（本地 PostgreSQL 或 Neon 开发库）
+
 npm install
-npx prisma migrate dev --name init
+npm run db:deploy
 npm run db:seed
 npm run dev
 ```
+
+生产部署见 [DEPLOY.md](./DEPLOY.md)。安全说明见 [SECURITY.md](./SECURITY.md)。
 
 打开 http://localhost:3000
 

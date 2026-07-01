@@ -1,3 +1,4 @@
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
@@ -35,6 +36,27 @@ function extFromMime(mime: string) {
   return map[mime] ?? "";
 }
 
+function useR2() {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY &&
+      process.env.R2_BUCKET_NAME &&
+      process.env.R2_PUBLIC_URL
+  );
+}
+
+function getR2Client() {
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  });
+}
+
 export function validateUpload(
   file: File,
   type: "resume" | "photo"
@@ -55,6 +77,37 @@ export function validateUpload(
   return null;
 }
 
+async function saveToR2(
+  buffer: Buffer,
+  file: File,
+  subdir: "resumes" | "photos",
+  filename: string
+): Promise<string> {
+  const key = `${subdir}/${filename}`;
+  await getR2Client().send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type || "application/octet-stream",
+    })
+  );
+
+  const publicUrl = process.env.R2_PUBLIC_URL!.replace(/\/$/, "");
+  return `${publicUrl}/${key}`;
+}
+
+async function saveLocally(
+  buffer: Buffer,
+  subdir: "resumes" | "photos",
+  filename: string
+): Promise<string> {
+  const dir = path.join(UPLOAD_DIR, subdir);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, filename), buffer);
+  return `/uploads/${subdir}/${filename}`;
+}
+
 export async function saveUpload(
   file: File,
   subdir: "resumes" | "photos"
@@ -65,10 +118,10 @@ export async function saveUpload(
   const ext =
     path.extname(file.name) || extFromMime(file.type) || ".bin";
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-  const dir = path.join(UPLOAD_DIR, subdir);
 
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), buffer);
+  if (useR2()) {
+    return saveToR2(buffer, file, subdir, filename);
+  }
 
-  return `/uploads/${subdir}/${filename}`;
+  return saveLocally(buffer, subdir, filename);
 }

@@ -1,22 +1,22 @@
 import "dotenv/config";
-import path from "path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { prisma } from "../src/lib/prisma";
 import bcrypt from "bcryptjs";
 
-function getDatabaseUrl() {
-  const url = process.env.DATABASE_URL ?? "file:./dev.db";
-  if (url.startsWith("file:./")) {
-    return `file:${path.join(process.cwd(), url.slice(5))}`;
-  }
-  return url;
-}
-
-const adapter = new PrismaBetterSqlite3({ url: getDatabaseUrl() });
-const prisma = new PrismaClient({ adapter });
-
 async function main() {
-  const password = await bcrypt.hash("admin123", 10);
+  const isProduction = process.env.NODE_ENV === "production";
+  const adminPasswordPlain =
+    process.env.SEED_ADMIN_PASSWORD ??
+    (isProduction ? undefined : "admin123");
+
+  if (!adminPasswordPlain) {
+    console.error(
+      "生产环境请设置 SEED_ADMIN_PASSWORD 后再运行 seed，例如：\n" +
+        "SEED_ADMIN_PASSWORD='your-secure-password' npm run db:seed"
+    );
+    process.exit(1);
+  }
+
+  const password = await bcrypt.hash(adminPasswordPlain, 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@handinhand.com" },
@@ -29,7 +29,17 @@ async function main() {
     },
   });
 
-  const teacherPassword = await bcrypt.hash("teacher123", 10);
+  const seedDemo = process.env.SEED_DEMO_DATA === "true" || !isProduction;
+  if (!seedDemo) {
+    console.log("种子数据：仅创建/更新管理员账号");
+    console.log("管理员: admin@handinhand.com");
+    return;
+  }
+
+  const teacherPassword = await bcrypt.hash(
+    process.env.SEED_TEACHER_PASSWORD ?? "teacher123",
+    10
+  );
 
   const teacher1User = await prisma.user.upsert({
     where: { email: "zhangsan@example.com" },
@@ -75,7 +85,10 @@ async function main() {
     },
   });
 
-  const parentPassword = await bcrypt.hash("parent123", 10);
+  const parentPassword = await bcrypt.hash(
+    process.env.SEED_PARENT_PASSWORD ?? "parent123",
+    10
+  );
 
   const parentUser = await prisma.user.upsert({
     where: { email: "parent@example.com" },
@@ -161,9 +174,11 @@ async function main() {
   }
 
   console.log("种子数据创建完成！");
-  console.log("管理员: admin@handinhand.com / admin123");
-  console.log("老师: zhangsan@example.com / teacher123");
-  console.log("家长: parent@example.com / parent123");
+  console.log("管理员: admin@handinhand.com");
+  if (!isProduction) {
+    console.log("老师: zhangsan@example.com / teacher123");
+    console.log("家长: parent@example.com / parent123");
+  }
 }
 
 main()

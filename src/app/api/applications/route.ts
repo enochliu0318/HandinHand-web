@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function GET() {
   const session = await auth();
@@ -10,6 +11,7 @@ export async function GET() {
 
   const applications = await prisma.accountApplication.findMany({
     orderBy: { createdAt: "desc" },
+    omit: { passwordHash: true },
   });
 
   return NextResponse.json(applications);
@@ -17,10 +19,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, phone, role, message } = body;
+  const { name, email, phone, role, message, password } = body;
 
-  if (!name || !email || !role) {
+  if (!name || !email || !role || !password) {
     return NextResponse.json({ error: "请填写必填项" }, { status: 400 });
+  }
+
+  if (typeof password !== "string" || password.length < 6) {
+    return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
   }
 
   if (role !== "TEACHER" && role !== "PARENT") {
@@ -42,6 +48,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const passwordHash = await bcrypt.hash(password, 10);
+
   const application = await prisma.accountApplication.create({
     data: {
       name,
@@ -49,7 +57,9 @@ export async function POST(req: NextRequest) {
       phone: phone || null,
       role,
       message: message || null,
+      passwordHash,
     },
+    omit: { passwordHash: true },
   });
 
   return NextResponse.json(application, { status: 201 });

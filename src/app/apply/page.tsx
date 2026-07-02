@@ -23,6 +23,21 @@ export default function ApplyPage() {
     setError("");
 
     const fd = new FormData(e.currentTarget);
+    const password = String(fd.get("password") || "");
+    const confirmPassword = String(fd.get("confirmPassword") || "");
+
+    if (password.length < 6) {
+      setError("密码至少 6 位");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("两次输入的密码不一致");
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch("/api/applications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -32,6 +47,7 @@ export default function ApplyPage() {
         phone: fd.get("phone"),
         role: fd.get("role"),
         message: fd.get("message"),
+        password,
       }),
     });
 
@@ -53,7 +69,7 @@ export default function ApplyPage() {
           <CheckCircle className="w-14 h-14 text-ios-green mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">申请已提交</h1>
           <p className="text-ios-gray text-sm mb-8">
-            管理员审核通过后会通过邮箱联系您开通账号。
+            管理员审核通过后，您可使用申请时设置的邮箱和密码直接登录。
           </p>
           <Link href="/">
             <IOSButton variant="secondary">返回首页</IOSButton>
@@ -68,7 +84,7 @@ export default function ApplyPage() {
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-1">申请账号</h1>
         <p className="text-ios-gray text-sm mb-6">
-          填写信息后，管理员会审核并为您开通账号。
+          填写信息并设置登录密码，管理员审核通过后即可登录。
         </p>
 
         <IOSCard>
@@ -96,6 +112,22 @@ export default function ApplyPage() {
                 { value: "TEACHER", label: "老师（学长学姐）" },
                 { value: "PARENT", label: "家长" },
               ]}
+            />
+            <IOSInput
+              name="password"
+              label="登录密码"
+              type="password"
+              required
+              placeholder="至少 6 位"
+              autoComplete="new-password"
+            />
+            <IOSInput
+              name="confirmPassword"
+              label="确认密码"
+              type="password"
+              required
+              placeholder="再次输入密码"
+              autoComplete="new-password"
             />
             <IOSTextarea
               name="message"

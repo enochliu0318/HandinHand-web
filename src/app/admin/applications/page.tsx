@@ -39,7 +39,6 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
   const [childName, setChildName] = useState("");
   const [approveError, setApproveError] = useState("");
 
@@ -56,24 +55,17 @@ export default function AdminApplicationsPage() {
 
   function startApprove(app: Application) {
     setApprovingId(app.id);
-    setPassword("");
     setChildName("");
     setApproveError("");
   }
 
   function cancelApprove() {
     setApprovingId(null);
-    setPassword("");
     setChildName("");
     setApproveError("");
   }
 
   async function handleApprove(app: Application) {
-    if (!password || password.length < 6) {
-      setApproveError("请设置至少 6 位的初始密码");
-      return;
-    }
-
     setProcessingId(app.id);
     setApproveError("");
 
@@ -82,7 +74,6 @@ export default function AdminApplicationsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "approve",
-        password,
         childName: app.role === "PARENT" ? childName : undefined,
       }),
     });
@@ -93,7 +84,7 @@ export default function AdminApplicationsPage() {
       cancelApprove();
       load();
       alert(
-        `已通过申请。请将以下信息告知申请人：\n邮箱：${app.email}\n密码：${password}`
+        `已通过申请。申请人可使用邮箱 ${app.email} 及申请时自设的密码登录。`
       );
     } else {
       const err = await res.json();
@@ -175,22 +166,18 @@ export default function AdminApplicationsPage() {
 
               {app.status === "PENDING" && approvingId === app.id ? (
                 <div className="space-y-3 border-t border-ios-separator pt-3">
-                  <IOSInput
-                    label="初始密码"
-                    type="password"
-                    placeholder="至少 6 位"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoFocus
-                  />
                   {app.role === "PARENT" && (
                     <IOSInput
                       label="孩子姓名"
                       placeholder="选填，留空则自动生成"
                       value={childName}
                       onChange={(e) => setChildName(e.target.value)}
+                      autoFocus
                     />
                   )}
+                  <p className="text-xs text-ios-gray">
+                    申请人已自行设置登录密码，您无需知晓或设置密码。
+                  </p>
                   {approveError && (
                     <p className="text-ios-red text-sm text-center">
                       {approveError}
@@ -203,7 +190,7 @@ export default function AdminApplicationsPage() {
                       disabled={processingId === app.id}
                     >
                       <Check className="w-4 h-4 mr-1" />
-                      确认开通
+                      确认通过
                     </IOSButton>
                     <IOSButton
                       size="sm"
@@ -223,7 +210,7 @@ export default function AdminApplicationsPage() {
                     disabled={processingId === app.id}
                   >
                     <Check className="w-4 h-4 mr-1" />
-                    通过并开通
+                    通过
                   </IOSButton>
                   <IOSButton
                     size="sm"

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 
 export async function PATCH(
   req: NextRequest,
@@ -14,7 +13,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { action, password, childName } = body;
+  const { action, childName } = body;
 
   const application = await prisma.accountApplication.findUnique({
     where: { id },
@@ -40,8 +39,11 @@ export async function PATCH(
     return NextResponse.json({ error: "无效操作" }, { status: 400 });
   }
 
-  if (!password || password.length < 6) {
-    return NextResponse.json({ error: "请设置至少 6 位的初始密码" }, { status: 400 });
+  if (!application.passwordHash) {
+    return NextResponse.json(
+      { error: "该申请未包含密码信息，请通知用户重新提交申请" },
+      { status: 400 }
+    );
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -51,7 +53,7 @@ export async function PATCH(
     return NextResponse.json({ error: "该邮箱已注册" }, { status: 400 });
   }
 
-  const hashed = await bcrypt.hash(password, 10);
+  const hashed = application.passwordHash;
 
   try {
     if (application.role === "TEACHER") {
@@ -99,6 +101,7 @@ export async function PATCH(
   const updated = await prisma.accountApplication.update({
     where: { id },
     data: { status: "APPROVED" },
+    omit: { passwordHash: true },
   });
 
   return NextResponse.json(updated);

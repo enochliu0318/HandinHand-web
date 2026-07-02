@@ -105,12 +105,13 @@ model Session {
 }
 
 model AccountApplication {
-  id        String            @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  role      ApplicationRole
-  message   String?
-  status    ApplicationStatus @default(PENDING)
-  createdAt DateTime          @default(now())
+  id           String            @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  role         ApplicationRole
+  message      String?
+  passwordHash String
+  status       ApplicationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
 }

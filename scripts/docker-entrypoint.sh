@@ -17,7 +17,10 @@ npm run db:deploy
 
 if [ "$RUN_SEED" = "true" ]; then
   echo "Seeding database..."
-  npm run db:seed
+  npm run db:seed || {
+    echo "Seed failed; if admin already exists, set RUN_SEED=false in .env"
+    exit 1
+  }
 fi
 
 echo "Starting application..."
